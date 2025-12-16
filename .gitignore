@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 *N=256*
+*N=512*
 *D0=128*
 
 # C extensions

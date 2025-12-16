@@ -145,7 +145,7 @@ def save_psi(fname, psi):
     data["bd"] = psi.get_bond_dimensions()
     np.save(fname, data, allow_pickle=True)
 
-@ray.remote(num_cpus=1)
+@ray.remote(num_cpus=6)
 def run_evol(g, m, a, N, D0, v, Q, dt, D, tol, method, snapshots, snapshots_states):
     ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')
     #
@@ -242,14 +242,14 @@ if __name__ == "__main__":
     dt = 1/16
     tol = 1e-6
     method = '12site'
-    snapshots_states = 16
+    snapshots_states = 32
     refs = []
     for m in [0, 0.5]:
-        for (N, a) in [(128, 0.25), (256, 0.125)]:
-            for D0 in [64, 128]:
+        for (N, a) in [(512, 0.125)]:
+            for D0 in [64, 128, 256, 512]:
                 snapshots = N // 2
-                job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
-                # job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+                # job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
+                job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
                 refs.append(job)
                 # mlat = m - g * g * a / 8
                 # # job = run_evol.remote(g, mlat, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
