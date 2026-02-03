@@ -9,7 +9,7 @@ import numpy as np
 import ray
 import yastn
 import yastn.tn.mps as mps
-from scripts_fermions.operators import HNN, sum_Ln2, measure_local_observables
+from scripts_fermions.operators import HNN, sum_Ln2, measure_local_observables, Hamiltonian, Boost, fermionP
 
 
 def folder_gs(g, m, a, N):
@@ -23,8 +23,21 @@ def folder_ex(g, m, a, N):
     return path
 
 
+def folder_exx(g, m, a, N):
+    path = Path(f"./results_fermions/{g=:0.4f}/{m=:0.4f}/{N=}/{a=:0.4f}/exx/")
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def folder_evol(g, m, a, N, v, Q, D0, dt, D, tol, method, mkdir=True):
     path = Path(f"./results_fermions/{g=:0.4f}/{m=:0.4f}/{N=}/{a=:0.4f}/{v=:0.4f}/{Q=:0.4f}/{D0=}/{dt=:0.4f}/{D=}/{tol=:0.0e}/{method}")
+    if mkdir:
+        path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def folder_gauss(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, mkdir=True):
+    path = Path(f"./results_fermions/{g=:0.4f}/{m=:0.4f}/{N=}/{a=:0.4f}/{P=:0.4f}/{x0=:0.4f}/{sg2=:0.4f}/{D0=}/{dt=:0.4f}/{D=}/{tol=:0.0e}/{method}")
     if mkdir:
         path.mkdir(parents=True, exist_ok=True)
     return path
@@ -64,7 +77,18 @@ def run_gs(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8):
     data["entropy"] = psi_gs.get_entropy()
     sch = psi_gs.get_Schmidt_values()
     data["schmidt"] = [x.data for x in sch]
+
+    T00, T11, T01, j0, j1, nu, Ln = measure_local_observables(psi_gs, 0, a, g, m, v=1, Q=0, ops=ops)
+    data['T00'] = T00
+    data['T11'] = T11
+    data['T01'] = T01
+    data['j0'] = j0
+    data['j1'] = j1
+    data['nu'] = nu
+    data['Ln'] = Ln
+
     np.save(fname, data, allow_pickle=True)
+
 
     fieldnames = ["D", "energy", "sweeps", "denergy", "dSchmidt", "min_Schmidt"]
     out = {"D" : max(data["bd"]),
@@ -139,6 +163,76 @@ def run_ex(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8):
             writer.writeheader()
         writer.writerow(out)
 
+
+
+@ray.remote(num_cpus=1)
+def run_exx(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8):
+    """ initial state at t=0 """
+    #
+    ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')
+    try:
+        fname = folder_gs(g, m, a, N) / f"state_D={D0}.npy"
+        data = np.load(fname, allow_pickle=True).item()
+        psi_gs = yastn.from_dict(data["psi"])
+    except FileNotFoundError:
+        return None
+
+    try:
+        fname = folder_ex(g, m, a, N) / f"state_D={D0}.npy"
+        data = np.load(fname, allow_pickle=True).item()
+        psi_ex = yastn.from_dict(data["psi"])
+    except FileNotFoundError:
+        return None
+
+
+    folder = folder_exx(g, m, a, N)
+    fname = folder / f"state_D={D0}.npy"
+    finfo = folder / "info.csv"
+    #
+    ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')
+    H0 = HNN(N, a, m, ops=ops)
+    e0 = a * g * g / 2
+    H1 = e0 * sum_Ln2(N, t=0, a=a, v=1, Q=1, ops=ops)
+    #
+    files = list(folder.glob("*.npy"))
+    Ds = [int(f.stem.split("=")[1]) for f in files]
+    if any(D <= D0 for D in Ds):
+        D = max(D for D in Ds if D <= D0)
+        print(f"Loading initial state with {D=}")
+        old_data = np.load(folder / f"state_D={D}.npy", allow_pickle=True).item()
+        psi_exx = yastn.from_dict(old_data["psi"])
+    else:
+        print(f"Random initial state.")
+        psi_exx = mps.random_mps(H0, D_total=D0, n=(N // 2))
+    # 2 sweeps of 2-site dmrg
+    info = mps.dmrg_(psi_exx, [H0, H1], max_sweeps=200, project=[psi_gs, psi_ex],
+                     method='2site', opts_svd={"D_total": D0, "tol": 1e-6},
+                     energy_tol=energy_tol, Schmidt_tol=Schmidt_tol, precompute=False)
+    #
+    data = {}
+    data["psi"] = psi_exx.to_dict()
+    data["bd"] = psi_exx.get_bond_dimensions()
+    data["entropy"] = psi_exx.get_entropy()
+    sch = psi_exx.get_Schmidt_values()
+    data["schmidt"] = [x.data for x in sch]
+    np.save(fname, data, allow_pickle=True)
+
+    fieldnames = ["D", "energy", "sweeps", "denergy", "dSchmidt", "min_Schmidt"]
+    out = {"D" : max(data["bd"]),
+           "energy": info.energy,
+           "sweeps": info.sweeps,
+           "denergy": info.denergy,
+           "dSchmidt": info.max_dSchmidt,
+           "min_Schmidt": min(data["schmidt"][N // 2])}
+    file_exists = os.path.isfile(finfo)
+    with open(finfo, 'a', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=";")
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(out)
+
+
+
 def save_psi(fname, psi):
     data = {}
     data["psi"] = psi.to_dict()
@@ -209,30 +303,186 @@ def run_evol(g, m, a, N, D0, v, Q, dt, D, tol, method, snapshots, snapshots_stat
             save_psi(folder / f"state_t={step.tf:0.4f}.npy", psi)
 
 
-if __name__ == "__main__":
+@ray.remote(num_cpus=2)
+def run_gauss(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states):
     #
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-g", type=float, default=1.0)
-    # parser.add_argument("-D0", type=int, default=256)
-    # parser.add_argument("-mm", type=float, default=1.0)
-    # parser.add_argument("-N", type=int, default=1024)
-    # parser.add_argument("-a", type=float, default=0.125)
-    # parser.add_argument("-Q", type=float, default=1.0)
+    ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')
+    #
+    try:
+        fname = folder_gs(g, m, a, N) / f"state_D={D0}.npy"
+        data = np.load(fname, allow_pickle=True).item()
+        psi = yastn.from_dict(data["psi"])
+        print(f" Loaded {fname=}")
+    except FileNotFoundError:
+        print(f" Not found {fname=}")
+        return None
+    #
+    e0 = a * g * g / 2
+    folder = folder_gauss(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method)
+    H = [HNN(N, a, m, ops=ops), e0 * sum_Ln2(N, 0, a, v=1, Q=0, ops=ops)]
+    #
+    fermionR = fermionP(N, a, P, x0, sg2, 'cp', parity=0, ops=ops)
+    fermionL = fermionP(N, a, -P, -x0, sg2, 'cm', parity=1, ops=ops)
+    #
+    psi = fermionL @ fermionR @ psi
+    psi = psi / psi.norm()
+    psi.canonize_(to='last')
+    psi.truncate_(to='first', opts_svd={'tol': tol, 'D_total': D})
+    #
+    times = np.linspace(0, N * a / 2, snapshots + 1)
+    sps = snapshots // snapshots_states
+    #
+    data = {}
+    data['entropy_1'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['entropy_2'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['entropy_3'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['Ln'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T00'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T11'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T01'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['j0'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['j1'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['nu'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['energy'] = np.zeros(snapshots + 1, dtype=np.float64)
+    data['time'] = np.zeros(snapshots + 1, dtype=np.float64) - 1  # times not calculated are < 0
+    data['min_Schmidt'] = np.zeros(snapshots + 1, dtype=np.float64) - 1  # times not calculated are < 0
 
-    # args = parser.parse_args()
-    # print(args)
+    evol = mps.tdvp_(psi, H, times,
+                    method=method, dt=dt,
+                    opts_svd={"D_total": D, "tol": tol},
+                    yield_initial=True, precompute=False, subtract_E=True)
 
-    # tref0 = time.time()
-    # run_gs(args.g, args.mm, args.a, args.N, args.D0)
-    # print(f"GS found in: {time.time() - tref0}")
+    tref0 = time.time()
+    for ii, step in enumerate(evol):
+        data['time'][ii] = step.tf
+        data['entropy_1'][ii, :] = psi.get_entropy(alpha=1)
+        data['entropy_2'][ii, :] = psi.get_entropy(alpha=2)
+        data['entropy_3'][ii, :] = psi.get_entropy(alpha=3)
+        data['energy'][ii] = mps.vdot(psi, H, psi).real
+        data["min_Schmidt"][ii] = min(psi.get_Schmidt_values()[N // 2].data)
 
-    # v = 1
-    # D, tol, method = args.D0, 1e-6, '12site'
-    # snapshots = args.N // 2
-    # dt = min(1 / 16, args.N * args.a / (2 * v * snapshots))
-    # tref0 = time.time()
-    # run_evol(args.g, args.mm, args.a, args.N, args.D0, v, args.Q, dt, D, tol, method, snapshots, 4)
-    # print(f"Evolution finished in: {time.time() - tref0}")
+        T00, T11, T01, j0, j1, nu, Ln = measure_local_observables(psi, step.tf, a, g, m, v=1, Q=0, ops=ops)
+        data['T00'][ii, :] = T00
+        data['T11'][ii, :] = T11
+        data['T01'][ii, :] = T01
+        data['j0'][ii, :] = j0
+        data['j1'][ii, :] = j1
+        data['nu'][ii, :] = nu
+        data['Ln'][ii, :] = Ln
+        print(f"t={step.tf:0.2f}  st={time.time() - tref0:0.1f} sek.")
+
+        if ii % sps == 0:
+            np.save(folder / f"results.npy", data, allow_pickle=True)
+            save_psi(folder / f"state_t={step.tf:0.4f}.npy", psi)
+
+
+
+
+
+@ray.remote(num_cpus=8)
+def run_boost(g, m, a, N, D0, D, tol):
+    ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')
+    #
+    try:
+        fname = folder_ex(g, m, a, N) / f"state_D={D0}.npy"
+        data = np.load(fname, allow_pickle=True).item()
+        psi = yastn.from_dict(data["psi"])
+        print(f" Loaded {fname=}")
+    except FileNotFoundError:
+        print(f" Not found {fname=}")
+        return None
+    #
+    t = 0
+    v = 1
+    Q = 0
+    H = Hamiltonian(N, m, g, t, a, v, Q, ops)
+    K = Boost(N, m, g, a, ops)
+
+    chis = np.linspace(0, 3, 61)
+
+
+    snapshots = len(chis) - 1
+    data = {}
+    data['entropy_1'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['entropy_2'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['entropy_3'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['Ln'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T00'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T11'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T01'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['j0'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['j1'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['nu'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['energy'] = np.zeros(snapshots + 1, dtype=np.float64)
+    data['time'] = np.zeros(snapshots + 1, dtype=np.float64) - 1  # times not calculated are < 0
+    data['min_Schmidt'] = np.zeros(snapshots + 1, dtype=np.float64) - 1  # times not calculated are < 0
+
+    opts_expmv = {'hermitian': True, 'tol': 1e-10}
+    opts_svd={"D_total": D, "tol": tol},
+
+    evol = mps.tdvp_(psi, K, chis,
+                     method='12site', opts_svd=opts_svd, dt=0.05,
+                     yield_initial=True, precompute=False, subtract_E=True,
+                     opts_expmv=opts_expmv)
+
+    data['chis'] = chis
+    data['psi'] = {}
+    tref0 = time.time()
+    for ii, step in enumerate(evol):
+        chi = step.tf
+        assert abs(chi - chis[ii]) < 1e-6, 'rapidity mismatch'
+        data['time'][ii] = step.tf
+        data['entropy_1'][ii, :] = psi.get_entropy(alpha=1)
+        data['entropy_2'][ii, :] = psi.get_entropy(alpha=2)
+        data['entropy_3'][ii, :] = psi.get_entropy(alpha=3)
+        data['energy'][ii] = mps.vdot(psi, H, psi).real
+        data["min_Schmidt"][ii] = min(psi.get_Schmidt_values()[N // 2].data)
+
+        T00, T11, T01, j0, j1, nu, Ln = measure_local_observables(psi, step.tf, a, g, m, v, Q, ops)
+        data['T00'][ii, :] = T00
+        data['T11'][ii, :] = T11
+        data['T01'][ii, :] = T01
+        data['j0'][ii, :] = j0
+        data['j1'][ii, :] = j1
+        data['nu'][ii, :] = nu
+        data['Ln'][ii, :] = Ln
+
+        data['psi'][ii] = psi.to_dict()
+
+        print(f"chi={step.tf:0.2f}  st={time.time() - tref0:0.1f} sek.")
+
+
+    fname = folder_ex(g, m, a, N) / f"state_D={D0}_boosted.npy"
+    np.save(fname, data, allow_pickle=True)
+
+
+
+# if __name__ == "__main__":
+#     #
+#     # parser = argparse.ArgumentParser()
+#     # parser.add_argument("-g", type=float, default=1.0)
+#     # parser.add_argument("-D0", type=int, default=256)
+#     # parser.add_argument("-mm", type=float, default=1.0)
+#     # parser.add_argument("-N", type=int, default=1024)
+#     # parser.add_argument("-a", type=float, default=0.125)
+#     # parser.add_argument("-Q", type=float, default=1.0)
+
+#     # args = parser.parse_args()
+#     # print(args)
+
+#     # tref0 = time.time()
+#     # run_gs(args.g, args.mm, args.a, args.N, args.D0)
+#     # print(f"GS found in: {time.time() - tref0}")
+
+#     # v = 1
+#     # D, tol, method = args.D0, 1e-6, '12site'
+#     # snapshots = args.N // 2
+#     # dt = min(1 / 16, args.N * args.a / (2 * v * snapshots))
+#     # tref0 = time.time()
+#     # run_evol(args.g, args.mm, args.a, args.N, args.D0, v, args.Q, dt, D, tol, method, snapshots, 4)
+#     # print(f"Evolution finished in: {time.time() - tref0}")
+
+if __name__ == "__main__":
 
     g=1
     ray.init()
@@ -245,11 +495,14 @@ if __name__ == "__main__":
     snapshots_states = 32
     refs = []
     for m in [0, 0.5]:
-        for (N, a) in [(512, 0.125)]:
-            for D0 in [64, 128, 256, 512]:
+        for (N, a) in [(512, 1/16)]:
+            for D0 in [128, ]:
                 snapshots = N // 2
                 # job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
-                job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+                job = run_boost.remote(g, m, a, N, D0, D0, tol)
+                # job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+
+                # job = run_exx.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
                 refs.append(job)
                 # mlat = m - g * g * a / 8
                 # # job = run_evol.remote(g, mlat, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
@@ -257,3 +510,30 @@ if __name__ == "__main__":
                 # refs.append(job)
 
     ray.get(refs)
+
+
+
+
+
+# if __name__ == "__main__":
+#     #
+#     g = 1
+#     ray.init()
+#     dt = 1 / 16
+#     tol = 1e-6
+#     method = '12site'
+#     snapshots_states = 16
+#     refs = []
+
+#     x0 = 1.5
+#     sg2 = 0.25
+
+#     for m in [0, 0.5]:
+#         for P in [0, 1, 2, 4, 6, 8]:
+#             for (N, a) in [(512, 0.0625)]:
+#                 D0 = 128
+#                 for D in [512]:
+#                     snapshots = N // 2
+#                     job = run_gauss.remote(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states)
+#                     refs.append(job)
+#     ray.get(refs)

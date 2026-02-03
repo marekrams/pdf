@@ -27,6 +27,33 @@ def Boost(N, m, g, a, ops=None):
     K1 = (-1 * a * a * g * g / 2) * sum_nLn2(N, ops=ops)
     return K0 + K1
 
+
+
+def fermionP(N, a, P, x0, sg2, op, parity=-1, ops=None):
+    #
+    I = ops.I()
+    if op == 'cp':
+        op = ops.cp()
+    elif op == 'cm':
+        op = ops.c()
+    else:
+        raise ValueError()
+
+    n0 = set_n0(N)
+    if parity == -1:
+        ns = np.arange(N)
+    if parity == 0:
+        ns = np.arange(0, N, 2)
+    if parity == 1:
+        ns = np.arange(1, N, 2)
+    Hterms = []
+    for n in ns:
+        amp = np.exp(-((n-n0)*a-x0)**2/(2*sg2)) * np.exp(1j*P*(n-n0)*a)
+        if abs(amp) > 1e-10:
+            Hterms.append(mps.Hterm(amplitude=amp, positions=n, operators=op))
+    return mps.generate_mpo(I, Hterms, N=N)
+
+
 def HNN(N, a, m, ops=None):
     I, cp, cm, d = ops.I(), ops.cp(), ops.c(), ops.n()
     sites = all_sites(N)

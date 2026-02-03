@@ -3,9 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-*N=256*
-*N=512*
-*D0=128*
+results_fermions/
+*.npy
 
 # C extensions
 *.so
