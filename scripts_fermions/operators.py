@@ -28,7 +28,6 @@ def Boost(N, m, g, a, ops=None):
     return K0 + K1
 
 
-
 def fermionP(N, a, P, x0, sg2, op, parity=-1, ops=None):
     #
     I = ops.I()
@@ -84,15 +83,47 @@ def Qm(n, t, n0, a, v, Q):
 def dLn(n, t, n0, a, v, Q):
     return Qp(n, t, n0, a, v, Q) - Qm(n, t, n0, a, v, Q) - (1 - (-1) ** n) / 2
 
-def cLn(n, t, n0, a, v, Q):
+def cLn(n, t=None, n0=None, a=None, v=None, Q=None):
     ns = np.array(all_sites_lesser_equal(n), dtype=np.float64)
-    return np.sum(Qp(ns, t, n0, a, v, Q) - Qm(ns, t, n0, a, v, Q)) - np.sum((1 - (-1) ** ns) / 2)
+    cc = - np.sum((1 - (-1) ** ns) / 2)
+    if t is not None:
+        cc += np.sum(Qp(ns, t, n0, a, v, Q) - Qm(ns, t, n0, a, v, Q))
+    return cc
 
 def cLns(N, t, n0, a, v, Q):
     sites = all_sites(N)
     ns = np.array(sites, dtype=np.float64)
     tmp = np.cumsum(Qp(ns, t, n0, a, v, Q) - Qm(ns, t, n0, a, v, Q) - (1 - (-1) ** ns) / 2)
     return dict(zip(sites, tmp))
+
+
+def t_to_L(tt, n, N, time=None, a=None, v=None, Q=None):
+    if isinstance(tt, (tuple)):
+        tt = tt[0]
+    return N // 2 - tt + cLn(n, time, set_n0(N), a, v, Q)
+
+
+def L_to_t(L, n, N, time=None, a=None, v=None, Q=None):
+    return N // 2 - L + cLn(n, time, set_n0(N), a, v, Q)
+
+
+def project_Ln(psi, L, n, time=None, a=None, v=None, Q=None):
+    N = psi.N
+    tt = L_to_t(L, n, N, time, a, v, Q)
+    tt = (int(np.round(tt)),)
+
+    leg = psi[n].get_legs(axes=2)
+    D = leg.tD[tt]
+
+    leg0 = yastn.Leg(psi.config, s=leg.s, t=[tt], D=[D])
+    proj = yastn.eye(psi.config, legs=leg0)
+
+    psi = psi.shallow_copy()
+    psi[n] = yastn.apply_mask(proj, psi[n], axes=2)
+    psi[n + 1] = yastn.apply_mask(proj, psi[n + 1], axes=0)
+    psi.canonize_(to='first', normalize=False)
+    return psi
+
 
 def Ln(n, N, t, a, v, Q, ops=None):
     I, d = ops.I(), ops.n()
@@ -172,6 +203,9 @@ def sum_nLn2(N, ops=None):
     return H
 
 def measure_local_observables(psi, t, a, g, m, v, Q, ops):
+    #
+    psi = psi / psi.norm()
+    #
     N = psi.N
     I, cp, cm, d = ops.I(), ops.cp(), ops.c(), ops.n()
     n0 = set_n0(N)

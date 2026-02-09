@@ -497,13 +497,14 @@ if __name__ == "__main__":
     for m in [0, 0.5]:
         for (N, a) in [(512, 1/16), (512, 1/8)]:
 
-            for D0 in [256]:
+            for D0 in [128, 256, 512]:
                 snapshots = N // 2
-                # job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
+                job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
                 # job = run_boost.remote(g, m, a, N, D0, D0, tol)
-                job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+                # job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+                refs.append(job)
 
-                # job = run_exx.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+                job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
                 # refs.append(job)
                 # mlat = m - g * g * a / 8
                 # # job = run_evol.remote(g, mlat, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
