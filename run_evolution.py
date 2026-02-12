@@ -482,60 +482,60 @@ def run_boost(g, m, a, N, D0, D, tol):
 #     # run_evol(args.g, args.mm, args.a, args.N, args.D0, v, args.Q, dt, D, tol, method, snapshots, 4)
 #     # print(f"Evolution finished in: {time.time() - tref0}")
 
-if __name__ == "__main__":
-
-    g=1
-    ray.init()
-
-    v = 1
-    Q = 1
-    dt = 1/16
-    tol = 1e-6
-    method = '12site'
-    snapshots_states = 16
-    refs = []
-    for m in [0, 0.5]:
-        for (N, a) in [(512, 1/16), (512, 1/8)]:
-
-            for D0 in [128, 256, 512]:
-                snapshots = N // 2
-                job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
-                # job = run_boost.remote(g, m, a, N, D0, D0, tol)
-                # job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
-                refs.append(job)
-
-                job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
-                # refs.append(job)
-                # mlat = m - g * g * a / 8
-                # # job = run_evol.remote(g, mlat, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
-                # job = run_ex.remote(g, mlat, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8)
-                refs.append(job)
-
-    ray.get(refs)
-
-
-
-
-
 # if __name__ == "__main__":
-#     #
-#     g = 1
+
+#     g=1
 #     ray.init()
-#     dt = 1 / 16
+
+#     v = 1
+#     Q = 1
+#     dt = 1/16
 #     tol = 1e-6
 #     method = '12site'
 #     snapshots_states = 16
 #     refs = []
-
-#     x0 = 1.5
-#     sg2 = 0.25
-
 #     for m in [0, 0.5]:
-#         for P in [0, 1, 2, 4, 6]:
-#             for (N, a) in [(256, 0.125)]:
-#                 D0 = 128
-#                 for D in [256, 512]:
-#                     snapshots = N // 2
-#                     job = run_gauss.remote(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states)
-#                     refs.append(job)
+#         for (N, a) in [(512, 1/8)]:
+
+#             for D0 in [128, 256, 512]:
+#                 snapshots = N // 2
+#                 # job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
+#                 # job = run_boost.remote(g, m, a, N, D0, D0, tol)
+#                 # job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+#                 # refs.append(job)
+
+#                 job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+#                 # refs.append(job)
+#                 # mlat = m - g * g * a / 8
+#                 # # job = run_evol.remote(g, mlat, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
+#                 # job = run_ex.remote(g, mlat, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8)
+#                 refs.append(job)
+
 #     ray.get(refs)
+
+
+
+
+
+if __name__ == "__main__":
+    #
+    g = 1
+    ray.init()
+    dt = 1 / 16
+    tol = 1e-6
+    method = '12site'
+    snapshots_states = 16
+    refs = []
+
+    x0 = 1.5
+    sg2 = 0.25
+
+    for m in [0, 0.5]:
+        for P in [0, 1, 2, 4, 6]:
+            for (N, a) in [(512, 0.125)]:
+                D0 = 128
+                for D in [256, 512]:
+                    snapshots = N // 2
+                    job = run_gauss.remote(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states)
+                    refs.append(job)
+    ray.get(refs)

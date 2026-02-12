@@ -1,6 +1,7 @@
 import numpy as np
 from operators import dLn, cLn, cLns, all_sites
 from operators import measure_local_observables, sum_Ln2, Ln, sum_nLn2, set_n0
+from operators import rdm_2site
 import yastn
 import yastn.tn.mps as mps
 
@@ -81,15 +82,38 @@ def test_measure_local_observables():
     assert np.allclose(oLn, Ln)
 
 
-
-
+def test_rdm():
+    ops = yastn.operators.SpinlessFermions(sym='U1')
+    N = 40
+    HI = mps.product_mpo(ops.I(), N=N)
+    psi = mps.random_mps(HI, n=N//2, D_total=64, dtype='complex128')
+    psi.canonize_(to='last').canonize_(to='first')  # ensure normalization
+    #
+    c, cp = ops.c(), ops.cp()
+    #
+    n0, n1 = 20, 25
+    rho = rdm_2site(psi, n0, n1)
+    Occp = yastn.tn.fpeps.fkron(c, cp)
+    Ocpc = yastn.tn.fpeps.fkron(cp, c)
+    #
+    res0 = yastn.einsum('abcd,badc', rho, Occp).item()
+    res1 = yastn.einsum('abcd,badc', rho, Ocpc).item()
+    #
+    ref0 = mps.measure_2site(psi, c, cp, psi, bonds=(20, 25))
+    ref1 = mps.measure_2site(psi, cp, c, psi, bonds=(20, 25))
+    #
+    assert abs(res0 - ref0) < 1e-12
+    assert abs(res1 - ref1) < 1e-12
+    #
+    assert rho.to_numpy().shape == (2, 2, 2, 2)
 
 
 if __name__ == "__main__":
-    test_cLn()
-    test_sum_Ln2(N=10)
-    test_sum_Ln2(N=16)
-    test_sum_nLn2(N=10)
-    test_sum_nLn2(N=16)
+    test_rdm()
+    # test_cLn()
+    # test_sum_Ln2(N=10)
+    # test_sum_Ln2(N=16)
+    # test_sum_nLn2(N=10)
+    # test_sum_nLn2(N=16)
 
     # test_measure_local_observables()

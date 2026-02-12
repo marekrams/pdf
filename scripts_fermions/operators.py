@@ -287,3 +287,32 @@ def dd_mpo_elements(I, d):
                                 (1, 1): I,  (1, 2): Bn,
                                             (2, 2): I}, common_legs=(1, 3))
     return L, C, R
+
+
+def rdm_2site(bra, n0, n1, ket=None):
+    if ket is None:
+        ket = bra
+
+    env = mps.Env(bra, ket)
+    env.setup_(to=(n0 - 1, n1 + 1))
+    FL = env.F[n0 - 1, n0]
+    FR = env.F[n1 + 1, n1]
+
+    lk = ket[n0].get_legs(axes=2)
+    lb = bra[n0].get_legs(axes=2)
+
+    ek = yastn.eye(ket.config, legs=lk.conj(), isdiag=False)
+    eb = yastn.eye(ket.config, legs=lb, isdiag=False)
+
+    EE = yastn.ncon([ek, eb], [[-0, -2], [-1, -3]])
+
+    for n in range(n0 + 1, n1):
+        EE = yastn.ncon([EE, ket[n], bra[n].conj()], [[-0, -1, 1, 2], [1, 3, -2], [2, 3, -3]])
+
+    FL = yastn.ncon([FL, ket[n0], bra[n0].conj()], [[2, 1], [1,  -0, -2], [2,  -1, -3]])
+    FR = yastn.ncon([FR, ket[n1], bra[n1].conj()], [[1, 2], [-2, -0,  1], [-3, -1,  2]])
+    FL = FL.swap_gate(axes=((0, 1), 3))
+    FR = FR.swap_gate(axes=((0, 1), 3))
+    rho = EE = yastn.ncon([FL, EE, FR], [[-0, -1, 1, 2], [1, 2, 3, 4], [-2, -3, 3, 4]])
+
+    return rho
