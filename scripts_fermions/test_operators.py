@@ -106,6 +106,21 @@ def test_rdm():
     assert abs(res1 - ref1) < 1e-12
     #
     assert rho.to_numpy().shape == (2, 2, 2, 2)
+    #
+    #
+    H = Occp + Ocpc
+    #
+    assert (H - H.H).norm() < 1e-12  # is hermitian
+    #
+    # G = expm(0.5 * H)
+    H = H + 0 * yastn.tn.fpeps.fkron(ops.I(), ops.I())  # the second part ensures that all blocks are present
+    D, U = yastn.eigh(H, axes = ((0, 2), (1, 3)))
+    D = yastn.exp(D, step=0.5)
+    G = yastn.ncon((U, D, U.conj()), ([-0, -2, 1], [1, 2], [-1, -3, 2]))
+
+    res = yastn.einsum('abcd,badc', rho, G).item()
+    print(res)
+
 
 
 if __name__ == "__main__":
