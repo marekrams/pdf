@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 
 results_fermions/
-*.npy
 
 # C extensions
 *.so
