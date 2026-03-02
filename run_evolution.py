@@ -495,13 +495,13 @@ if __name__ == "__main__":
     snapshots_states = 16
     refs = []
     for m in [0.6]:
-        for (N, a) in [(512, 1/16), (256, 1/8)]:
+        for (N, a) in [(512, 1/8)]:
 
-            for D0 in [128, 256 ]:
+            for D0 in [128, ]:
                 snapshots = N // 2
                 # job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, snapshots, snapshots_states)
-                job = run_boost.remote(g, m, a, N, D0, D0, tol)
-                # job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
+                #job = run_boost.remote(g, m, a, N, D0, D0, tol)
+                job = run_gs.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
                 # refs.append(job)
 
                 # job = run_ex.remote(g, m, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-10)
@@ -517,25 +517,25 @@ if __name__ == "__main__":
 
 
 
-# if __name__ == "__main__":
-#     #
-#     g = 1
-#     ray.init()
-#     dt = 1 / 16
-#     tol = 1e-6
-#     method = '12site'
-#     snapshots_states = 16
-#     refs = []
+if __name__ == "__main__":
+    #
+    g = 1
+    ray.init()
+    dt = 1 / 16
+    tol = 1e-6
+    method = '12site'
+    snapshots_states = 16
+    refs = []
 
-#     x0 = 1.5
-#     sg2 = 0.25
+    x0 = 1.5
+    sg2 = 0.25
 
-#     for m in [0, 0.5]:
-#         for P in [0, 1, 2, 4, 6]:
-#             for (N, a) in [(512, 0.125)]:
-#                 D0 = 128
-#                 for D in [512,]:
-#                     snapshots = N // 2
-#                     job = run_gauss.remote(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states)
-#                     refs.append(job)
-#     ray.get(refs)
+    for m in [0.6]:
+        for P in [0, 1, 2, 4, 6]:
+            for (N, a) in [(512, 0.125)]:
+                D0 = 128
+                for D in [256, 512]:
+                    snapshots = N // 2
+                    job = run_gauss.remote(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states)
+                    refs.append(job)
+    ray.get(refs)
