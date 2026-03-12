@@ -532,9 +532,9 @@ if __name__ == "__main__":
 
     for m in [0.0, 0.5, 0.6]:
         for P in [3]:
-            for (N, a) in [(512, 1/8), (512, 1/16), (256, 1/8)]:
+            for (N, a) in [(512, 1/8), (512, 1/16)]:  # (256, 1/8)
                 D0 = 128
-                for D in [256, 512]:
+                for D in [512]:
                     snapshots = N // 2
                     job = run_gauss.remote(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states)
                     refs.append(job)
