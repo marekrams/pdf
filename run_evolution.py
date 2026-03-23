@@ -527,10 +527,10 @@ if __name__ == "__main__":
     snapshots_states = 8
     refs = []
 
-    x0 = 1.5
-    sg2 = 0.5
+    x0 = 3.0
+    sg2 = 0.0625
 
-    for m in [0.0, 0.5, 0.6]:
+    for m in [0.0, 0.5]:
         for P in [0, 1, 2, 3, 4]:
             for (N, a) in [(256, 1/8)]:  # (256, 1/8)
                 D0 = 128
