@@ -11,8 +11,8 @@ from scripts_fermions.operators import Hamiltonian
 Nas = [(256, 0.125)] #, (512, 0.0625), (512, 0.125)]
 ms = [0.0, 0.5]
 g = 1
-#sg2 = 0.25
-x0 = 3.0
+sg2 = 0.25
+#x0 = 3.0
 #
 PPs = np.linspace(0, 6, 49)
 Ds = [256]
@@ -24,7 +24,7 @@ def fn_mass(fns, **kwargs):
     return [x for x in fns if all( f"{k}={v}" in x for k, v in kwargs.items())][0]
 
 
-for sg2 in [0.5, 0.25, 0.125, 0.0625]:
+for x0 in [3.0, 6.0, 9.0]:
     for N, a in Nas:
         for m in ms:
             #
