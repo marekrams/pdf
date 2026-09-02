@@ -113,8 +113,8 @@ def project_Ln(psi, L, n, time=None, a=None, v=None, Q=None):
     tt = (int(np.round(tt)),)
 
     leg = psi[n].get_legs(axes=2)
-    D = leg.tD[tt]
 
+    D = leg.tD.get(tt, 1)
     leg0 = yastn.Leg(psi.config, s=leg.s, t=[tt], D=[D])
     proj = yastn.eye(psi.config, legs=leg0)
 

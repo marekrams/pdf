@@ -15,13 +15,13 @@ sg2 = 0.25
 #x0 = 3.0
 #
 Ps = [0, 1, 2, 3, 4]
-Ds = [256]
+Ds = [256, 512]
 
 def fn_mass(fns, **kwargs):
     return [x for x in fns if all( f"{k}={v}" in x for k, v in kwargs.items())][0]
 
 
-for x0 in [6.0, 9.0]:
+for x0 in [3.0, 6.0, 9.0]:
     for N, a in Nas:
         for m in ms:
             ts = np.linspace(0, N * a / 2, 9)
@@ -30,6 +30,8 @@ for x0 in [6.0, 9.0]:
             fnames = glob.glob(glob_path, recursive=True)
             fns = sorted([fname for fname in fnames if all(x in fname for x in ["/g=1.0000/", "dt=0.0625", f"{N=}", f"{a=:0.4f}", f"{x0=:0.4f}", f"{sg2=:0.4f}", f"{m=:0.4f}"])])
             psi_t = {(t, P, D): yastn.from_dict(np.load(fn_mass(fns, t=t, P=P, D=D), allow_pickle=True).item()['psi']) for t in ts for P in Ps for D in Ds}
+
+            print(sorted(psi_t.keys()))
             # #
             D = 128
             ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')

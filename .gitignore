@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 results_fermions/
+state_D=*
 
 # C extensions
 *.so

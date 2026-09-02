@@ -1,0 +1,175 @@
+\RequirePackage{fix-cm}
+\documentclass[prl,aps,reprint,floatfix,superscriptaddress]{revtex4-2}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{slashed}
+\usepackage{graphicx}
+\usepackage{bm}
+%\usepackage[T1]{fontenc}
+%\usepackage[utf8]{inputenc}
+\usepackage[colorlinks,linkcolor=blue,citecolor=blue]{hyperref}
+
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\bea}{\begin{eqnarray}}
+\newcommand{\eea}{\end{eqnarray}}
+\newcommand{\ba}{\begin{eqnarray}}
+\newcommand{\ea}{\end{eqnarray}}
+\DeclareMathOperator\arctanh{arctanh}
+
+\newcommand{\fslash}{\hspace{-1.4ex}/\hspace{0.6ex} }
+\newcommand{\Dslash}{D\hspace{-1.6ex}/\hspace{0.6ex} }
+\newcommand{\Wslash}{W\hspace{-1.6ex}/\hspace{0.6ex} }
+\newcommand{\pslash}{p\hspace{-1.ex}/\hspace{0.6ex} }
+\newcommand{\kslash}{k\hspace{-1.ex}/\hspace{0.6ex} }
+\newcommand{\underkslash}{{\underline k}\hspace{-1.ex}/\hspace{0.6ex} }
+\newcommand{\epslash}{{\epsilon\hspace{-1.ex}/\hspace{0.6ex}}}
+\newcommand{\partslash}{\partial\hspace{-1.6ex}/\hspace{0.6ex} }
+
+\newcommand{\nn}{\nonumber}
+\newcommand{\Tr}{\mbox{Tr}\;}
+\newcommand{\tr}{\mbox{tr}\;}
+\newcommand{\ket}[1]{\left|#1\right\rangle}
+\newcommand{\bra}[1]{\left\langle#1\right|}
+\newcommand{\rhoraket}[3]{\langle#1|#2|#3\rangle}
+\newcommand{\brkt}[2]{\langle#1|#2\rangle}
+\newcommand{\pdif}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\pndif}[3]{\frac{\partial^#1 #2}{\partial #3^#1}}
+\newcommand{\pbm}[1]{\protect{\bm{#1}}}
+\newcommand{\avg}[1]{\left\langle #1\right\rangle}
+\newcommand{\vnabla}{\mathbf{\nabla}}
+\newcommand{\notes}[1]{\fbox{\parbox{\columnwidth}{#1}}}
+
+\newcommand{\CA}{{\cal A}} \newcommand{\CQ}{{\cal Q}}
+\newcommand{\CC}{{\cal C}} \newcommand{\CD}{{\cal D}}
+\newcommand{\CL}{{\cal L}} \newcommand{\CE}{{\cal E}}
+\newcommand{\CN}{{\cal N}} \newcommand{\hg}{\hat{g}}
+\newcommand{\CH}{{\cal H}} \newcommand{\CW}{{\cal W}}
+\newcommand{\CG}{{\cal G}} \newcommand{\CX}{{\cal X}}
+\newcommand{\CF}{{\cal F}} \newcommand{\CB}{{\cal B}}
+\newcommand{\CO}{{\cal O}} \newcommand{\OO}{{\cal O}}
+
+\def\be{\begin{eqnarray}}
+\def\ee{\end{eqnarray}}
+\def\bea{\be}
+\def\eea{\ee}
+\def\calO{{\cal O}}
+\def\calB{{\cal B}}
+\newcommand{\e}{{\mbox{e}}}
+\def\del{\partial}
+\def\vr{{\vec r}}
+\def\vk{{\vec k}}
+\def\vq{{\vec q}}
+\def\vp{{\vec p}}
+\def\vP{{\vec P}}
+\def\vt{{\vec \tau}}
+\def\vs{{\vec \sigma}}
+\def\vJ{{\vec J}}
+\def\vB{{\vec B}}
+\def\hatr{{\hat r}}
+\def\hatk{{\hat k}}
+\def\roughly#1{\mathrel{\raise.3ex\hbox{$#1$\kern-.75em%
+\lower1ex\hbox{$\sim$}}}}
+\def\lsim{\roughly<}
+\def\gsim{\roughly>}
+\def\fm{{\mbox{fm}}}
+\def\vx{{\vec x}}
+\def\EM{{\rm EM}}
+\def\barp{{\bar p}}
+\def\zz{{z \bar z}}
+\def\mus{{\cal M}_s}
+\def\abs#1{{\left| #1 \right|}}
+\def\ve{{\vec \epsilon}}
+\def\nlo#1{{\mbox{N$^{#1}$LO}}}
+\def\MS{{\mbox{M1V}}}
+\def\mut{{\mbox{M1S}}}
+\def\Qt{{\mbox{E2S}}}
+\def\rM{{\cal R}_{\rm M1}}\def\rE{{\cal R}_{\rm E2}}
+\def\la{{\Big<}}
+\def\ra{{\Big>}}
+
+\newcommand{\psl}{\!\not\! p}
+\newcommand{\qsl}{\!\not\! q}
+\renewcommand{\Im}{{\rm Im\,}}
+\renewcommand{\Re}{{\rm Re\,}}
+
+\newcommand{\stirlingii}{\genfrac{\{}{\}}{0pt}{}}
+
+\newcommand{\sg}{\sigma}
+\newcommand{\sgt}{\widetilde{\sigma}}
+\renewcommand{\th}{\theta}
+\newcommand{\dl}{\delta}
+\newcommand{\gm}{\gamma}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\f}[2]{\frac{#1}{#2}}
+
+\newcommand{\chid}{\chi^\dagger}
+\newcommand{\psib}{\bar{\psi}}
+\newcommand{\psid}{\psi^\dagger}
+
+\newcommand{\eq}{\begin{equation}}
+\newcommand{\eqx}{\end{equation}}
+\newcommand{\eqn}{\begin{eqnarray}}
+\newcommand{\eqnx}{\end{eqnarray}}
+
+\begin{document}
+
+
+\onecolumngrid
+
+In the staggered-fermion formulation, we consider finite one-dimensional lattice of $N$ sites with fermionic variables $\chi_n$, normalized as $\{\chid_n, \chi_m\}=\dl_{nm}$, at each lattice site and $N$ is even. Here, the sites are indexed as $n=0,1,\ldots,N-1$ with discretized lattice spacing $a$. We consider a system with open boundary conditions.
+
+
+Electric field operator,
+\eq
+L_n - L_{n-1} = \chid_n \chi_{n} - \frac{1 + (-1)^n}{2} + Q^+_n(t) - Q^-_n(t),
+\eqx
+with $L_{-1} = 0$ and $L_{N-1} = 0$ in a state constrained to $N/2$ fermions and zero total charge.
+Two moving charges with trajectories, $x=\pm v t$ are smeared across neighboring sites as
+\eq
+Q^\pm_n(t) = Q\cdot \max\left( 1- |n_0 \pm vt/a -n|, 0 \right).
+\eqx
+
+Components of energy-momentum tensor are discretized as
+\eqn
+T^{00}_n &=& \f{i}{4a^2}  (K_n + K_{n-1}) + \f{g^2}{4} (L_n^2 +  L_{n-1}^2) +\f{m}{a} (-1)^n \chid_n \chi_n, \nonumber \\
+T^{11}_n &=& \f{i}{4a^2}  (K_n + K_{n-1}) - \f{g^2}{4} (L_n^2 +  L_{n-1}^2),  \nonumber\\
+T^{01}_n &=& \f{i}{4a^2} \left( \chid_{n+1} \chi_{n-1} -  \chid_{n-1} \chi_{n+1}\right),
+\eqnx
+where the kinetic term component $K_n = \chid_{n+1} \chi_{n} - \chid_n \chi_{n+1}$ and $K_{-1} = K_{N-1} = 0$.
+
+\noindent The Hamiltonian reads
+\eqn
+\label{H00}
+\mathbb H = a \sum_{n=0}^{N-1} T^{00}_n = \f{i}{2a} \sum_{n=0}^{N-2} \left( \chid_{n+1} \chi_{n} - \chid_n \chi_{n+1} \right) +  m \sum_{n=0}^{N-1} (-1)^n \chid_n \chi_n +  \f{g^2 a}{2} \sum_{n=0}^{N-1} L_n^2
+\eqnx
+
+\noindent  Centering in the middle of the lattice $n_0 = (N-1)/2$, the boost operator reads
+\eqn
+\label{H00}
+\mathbb K &=& -a^2 \sum_{n=0}^{N-1} (n-n_0) T^{00}_n  \nonumber \\
+                  &=&  \f{-i}{2} \sum_{n=0}^{N-1} \left(n +\frac12 - n_0 \right) \left( \chid_{n+1} \chi_{n} - \chid_n \chi_{n+1} \right)  -  a m \sum_{n=0}^{N-1} (-1)^n \left(n - n_0 \right) \chid_n \chi_n -  \f{g^2 a^2}{2} \sum_{n=0}^{N-1} \left(n + \frac12 - n_0 \right) L_n^2
+\eqnx
+
+
+We define current operators and chiral condensate density for pairs or sites
+\eqn
+j^{0}_i  &=& \frac{1}{2a} \left(\chid_{2i} \chi_{2i} + \chid_{2i+1} \chi_{2i+1} \right),  \nonumber\\
+j^{1}_i &=&  \frac{1}{2a} \left(\chid_{2i} \chi_{2i+1} + \chid_{2i+1} \chi_{2i} \right),  \nonumber\\
+\nu_i  &=& \frac{1}{2a} \left(\chid_{2i} \chi_{2i} - \chid_{2i+1} \chi_{2i+1} \right),  
+\eqnx
+
+
+\newpage
+
+We boost the first excited state $|P=0\rangle$ as
+$$
+|P \rangle = e^{-i \chi \mathbb K} |P=0\rangle
+$$
+where $\chi$ follows as
+$$
+P = E \frac{e^{2\chi} - 1}{e^{2\chi} + 1},
+$$
+and $E$ is the energy above the ground state.
+
+
+\end{document}
