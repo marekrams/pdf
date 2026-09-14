@@ -288,7 +288,12 @@ def get_psiLn_pair(psi, n0):
     psis2 = [psipm6, psipm5, psipm4, psipm3, psipm2, psipm1, psip0, psip1, psip2, psip3, psip4, psip5, psip6]
     pr2 = np.array([x.norm() ** 2 for x in psis2], dtype=np.float64)
 
-    return pr2
+    ents = [x.get_entropy() for x in psis2]
+
+    ent2a = np.array([ent[n0] for ent in ents], dtype=np.float64)
+    ent2b = np.array([ent[n0+1] for ent in ents], dtype=np.float64)
+
+    return pr2, ent2a, ent2b
 
 
 def get_psiLn(psi, n0):
@@ -306,6 +311,12 @@ def get_psiLn(psi, n0):
     en1 = np.array([x.get_entropy()[n0] for x in psis1], dtype=np.float64)
     return pr1, en1
 
+
+def get_2site_prob(psi, na, nb):
+    psis1 =  [project_Ln(psi, ll, na-1) for ll in [3,2,1,0,-1,-2,-3]]
+    psis11 = [[project_Ln(psi1, ll, nb-1) for ll in [3,2,1,0,-1,-2,-3]] for psi1 in psis1]
+    pr2s = np.array([[x.norm() ** 2 for x in pp] for pp in psis11], dtype=np.float64)
+    return pr2s
 
 @ray.remote(num_cpus=8)
 def run_evol(g, m, a, N, D0, v, Q, dt, D, tol, method, mlat, snapshots, snapshots_states):
@@ -355,6 +366,11 @@ def run_evol(g, m, a, N, D0, v, Q, dt, D, tol, method, mlat, snapshots, snapshot
     data['ent1c'] = np.zeros((snapshots + 1, 7), dtype=np.float64)
 
     data['pr2'] = np.zeros((snapshots + 1, 13), dtype=np.float64)
+    data['ent2a'] = np.zeros((snapshots + 1, 13), dtype=np.float64)
+    data['ent2b'] = np.zeros((snapshots + 1, 13), dtype=np.float64)
+
+    data['pr11'] = np.zeros((snapshots + 1, 2, 10, 7, 7), dtype=np.float64)
+
 
   # times not calculated are < 0
 
@@ -383,12 +399,18 @@ def run_evol(g, m, a, N, D0, v, Q, dt, D, tol, method, mlat, snapshots, snapshot
         data['Ln'][ii, :] = Ln
 
         n0 = N // 2
-        data['pr2'][ii, :] = get_psiLn_pair(psi, n0)
+        data['pr2'][ii, :], data['ent2a'][ii, :], data['ent2b'][ii, :] = get_psiLn_pair(psi, n0)
         data['pr1a'][ii, :], data['ent1a'][ii, :] = get_psiLn(psi, n0 - 1)
         data['pr1b'][ii, :], data['ent1b'][ii, :] = get_psiLn(psi, n0)
         data['pr1c'][ii, :], data['ent1c'][ii, :] = get_psiLn(psi, n0 + 1)
 
+        for kk in range(2):
+            for ll in range(10):
+                data['pr11'][ii, kk, ll, :, :] = get_2site_prob(psi, n0+kk, n0+kk+ll)
+
+
         data['evol_time'][ii] = time.time() - tref0
+
 
         print(f"t={step.tf:0.2f}  st={data['evol_time'][ii]:0.1f} sek.")
 
@@ -562,8 +584,9 @@ if __name__ == "__main__":
     mlat = True
     refs = []
     for m in [0.0, 0.1, 0.2, 0.3183, 0.4, 0.5, 0.6, 0.7]:
-        for (N, a) in [(1024, 1/16)]:
-            for D0 in [256]:
+        for (N, a) in [(512, 1/8)]:
+        # for (N, a) in [(1024, 1/16)]:
+            for D0 in [128]:
                 snapshots = N // 2
                 # job = run_gs.remote(g, m, a, N, D0, mlat, energy_tol=1e-10, Schmidt_tol=1e-10)
                 # job = run_ex.remote(g, mlat, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8)
