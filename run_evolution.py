@@ -583,14 +583,14 @@ if __name__ == "__main__":
     snapshots_states = 16
     mlat = True
     refs = []
-    for m in [0.0, 0.1, 0.2, 0.3183, 0.4, 0.5, 0.6, 0.7]:
-        for (N, a) in [(512, 1/8)]:
-        # for (N, a) in [(1024, 1/16)]:
-            for D0 in [128]:
+    for m in [0.8]:
+        for (N, a) in [(512, 1/8), (1024, 1/16)]:
+        # for (N, a) in []:
+            for D0 in [256]:
                 snapshots = N // 2
-                # job = run_gs.remote(g, m, a, N, D0, mlat, energy_tol=1e-10, Schmidt_tol=1e-10)
+                job = run_gs.remote(g, m, a, N, D0, mlat, energy_tol=1e-10, Schmidt_tol=1e-10)
                 # job = run_ex.remote(g, mlat, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8)
-                job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, mlat, snapshots, snapshots_states)
+                # job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, mlat, snapshots, snapshots_states)
                 refs.append(job)
     ray.get(refs)
 
