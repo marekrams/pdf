@@ -586,7 +586,7 @@ if __name__ == "__main__":
     for m in [0.8]:
         for (N, a) in [(512, 1/8), (1024, 1/16)]:
         # for (N, a) in []:
-            for D0 in [256]:
+            for D0 in [512]:
                 snapshots = N // 2
                 job = run_gs.remote(g, m, a, N, D0, mlat, energy_tol=1e-10, Schmidt_tol=1e-10)
                 # job = run_ex.remote(g, mlat, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8)
