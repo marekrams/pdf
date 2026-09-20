@@ -419,6 +419,86 @@ def run_evol(g, m, a, N, D0, v, Q, dt, D, tol, method, mlat, snapshots, snapshot
             # save_psi(folder / f"state_t={step.tf:0.4f}.npy", psi)
 
 
+
+@ray.remote(num_cpus=8)
+def run_evol_pr1(g, m, a, N, D0, v, Q, dt, D, tol, method, mlat, snapshots, snapshots_states):
+    ops = yastn.operators.SpinlessFermions(sym='U1', tensordot_policy='no_fusion')
+    #
+    try:
+        fname = folder_gs(g, m, a, N, mlat) / f"state_D={D0}.npy"
+        data = np.load(fname, allow_pickle=True).item()
+        psi = yastn.from_dict(data["psi"])
+    except FileNotFoundError:
+        return None
+    #
+    folder = folder_evol(g, m, a, N, v, Q, D0, dt, D, tol, method, mlat)
+    #
+    if mlat:
+        m = m - g * g * a / 8
+    #
+    e0 = a * g * g / 2
+    H0 = HNN(N, a, m, ops=ops)
+    Ht = lambda t: [H0, e0 * sum_Ln2(N, t, a, v, Q, ops=ops)]
+
+    times = np.linspace(0, N * a / (2 * v), snapshots + 1)
+    sps = snapshots // snapshots_states
+
+    data = {}
+    data['entropy_1'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['entropy_2'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['entropy_3'] = np.zeros((snapshots + 1, N + 1), dtype=np.float64)
+    data['Ln'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T00'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T11'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['T01'] = np.zeros((snapshots + 1, N), dtype=np.float64)
+    data['j0'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['j1'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['nu'] = np.zeros((snapshots + 1, N // 2), dtype=np.float64)
+    data['energy'] = np.zeros(snapshots + 1, dtype=np.float64)
+    data['evol_time'] = np.zeros(snapshots + 1, dtype=np.float64)  # times not calculated are < 0
+    data['time'] = np.zeros(snapshots + 1, dtype=np.float64) - 1  # times not calculated are < 0
+
+    data['min_Schmidt'] = np.zeros(snapshots + 1, dtype=np.float64) - 1  # times not calculated are < 0
+    data['SVs'] = {}
+
+  # times not calculated are < 0
+
+    evol = mps.tdvp_(psi, Ht, times,
+                    method=method, dt=dt,
+                    opts_svd={"D_total": D, "tol": tol},
+                    yield_initial=True, precompute=False, subtract_E=True)
+
+    tref0 = time.time()
+    print(times)
+    for ii, step in enumerate(evol):
+        data['time'][ii] = step.tf
+        data['entropy_1'][ii, :] = psi.get_entropy(alpha=1)
+        data['entropy_2'][ii, :] = psi.get_entropy(alpha=2)
+        data['entropy_3'][ii, :] = psi.get_entropy(alpha=3)
+        data['energy'][ii] = mps.vdot(psi, Ht(step.tf), psi).real
+        SV = psi.get_Schmidt_values()
+        data["min_Schmidt"][ii] = min(SV[N // 2].data)
+        data['SVs'][ii] = [x.to_dict() for x in SV]
+
+        T00, T11, T01, j0, j1, nu, Ln = measure_local_observables(psi, step.tf, a, g, m, v, Q, ops)
+        data['T00'][ii, :] = T00
+        data['T11'][ii, :] = T11
+        data['T01'][ii, :] = T01
+        data['j0'][ii, :] = j0
+        data['j1'][ii, :] = j1
+        data['nu'][ii, :] = nu
+        data['Ln'][ii, :] = Ln
+
+        data['evol_time'][ii] = time.time() - tref0
+        print(f"t={step.tf:0.2f}  st={data['evol_time'][ii]:0.1f} sek.")
+
+        if ii % sps == 0:
+            np.save(folder / f"results_2.npy", data, allow_pickle=True)
+            # save_psi(folder / f"state_t={step.tf:0.4f}.npy", psi)
+
+
+
+
 @ray.remote(num_cpus=2)
 def run_gauss(g, m, a, N, P, x0, sg2, D0, dt, D, tol, method, snapshots, snapshots_states):
     #
@@ -583,14 +663,14 @@ if __name__ == "__main__":
     snapshots_states = 16
     mlat = True
     refs = []
-    for m in [0.8]:
-        for (N, a) in [(512, 1/8), (1024, 1/16)]:
-        # for (N, a) in []:
-            for D0 in [128, 256]:
+    ms = [0.0, 0.1, 0.2, 0.3183, 0.4, 0.5, 0.6, 0.7, 0.8]
+    for m in ms:
+        for (N, a) in [(512, 1/8)]:
+            for D0 in [128]:
                 snapshots = N // 2
                 # job = run_gs.remote(g, m, a, N, D0, mlat, energy_tol=1e-10, Schmidt_tol=1e-10)
                 # job = run_ex.remote(g, mlat, a, N, D0, energy_tol=1e-10, Schmidt_tol=1e-8)
-                job = run_evol.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, mlat, snapshots, snapshots_states)
+                job = run_evol_pr1.remote(g, m, a, N, D0, v, Q, dt, D0, tol, method, mlat, snapshots, snapshots_states)
                 refs.append(job)
     ray.get(refs)
 
